@@ -1,0 +1,25 @@
+# ─── Secrets — NEVER commit these ─────────────────────────────────────────────
+.env
+
+# ─── Python runtime ───────────────────────────────────────────────────────────
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# ─── Pytest ───────────────────────────────────────────────────────────────────
+.pytest_cache/
+
+# ─── Playwright ───────────────────────────────────────────────────────────────
+playwright-report/
+test-results/
+
+# ─── Hackathon deliverables — keep these IN the repo ─────────────────────────
+# screenshots/   <-- intentionally NOT ignored; commit your screenshots
+# videos/        <-- intentionally NOT ignored; commit your videos
+
+# ─── OS noise ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

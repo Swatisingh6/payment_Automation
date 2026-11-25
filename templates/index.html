@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Automation System — India (INR)</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background: #f1f5f9;
+            color: #0f172a;
+            margin: 0;
+            padding: 36px 16px;
+        }
+        .container {
+            background: #ffffff;
+            padding: 32px 28px;
+            max-width: 440px;
+            margin: 0 auto;
+            border-radius: 14px;
+            box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+            text-align: center;
+        }
+        .badge {
+            display: inline-block;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 999px;
+            margin-bottom: 12px;
+        }
+        h1 {
+            font-size: 22px;
+            margin: 0 0 8px;
+        }
+        .subtitle {
+            color: #475569;
+            font-size: 14px;
+            margin: 0 0 20px;
+        }
+        .product-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 18px;
+            text-align: left;
+        }
+        .product-card label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            font-size: 14px;
+            background: #ffffff;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+        .amount-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 15px;
+        }
+        .amount-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        button#payButton {
+            width: 100%;
+            background: #2563eb;
+            color: #ffffff;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background 0.15s ease;
+        }
+        button#payButton:hover {
+            background: #1d4ed8;
+        }
+        #message {
+            margin-top: 18px;
+            font-size: 14px;
+            font-weight: 600;
+            min-height: 20px;
+        }
+        #message.success { color: #15803d; }
+        #message.error { color: #b91c1c; }
+        #paymentReceipt {
+            display: none;
+            margin-top: 14px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 12px 14px;
+            text-align: left;
+            font-size: 13px;
+            color: #166534;
+            word-break: break-all;
+        }
+        #paymentReceipt div { margin: 4px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <span class="badge">🇮🇳 India Checkout • INR (₹) • Test Mode</span>
+        <h1>Payment Automation</h1>
+        <p class="subtitle">Razorpay Multi-Method Checkout Flow</p>
+
+        <div class="product-card">
+            <label for="productSelect">Select Plan (INR)</label>
+            <select id="productSelect" name="product">
+                {% for product in products %}
+                <option
+                    value="{{ product.id }}"
+                    data-amount="{{ product.display_amount }}"
+                    data-name="{{ product.name }}"
+                    {% if product.id == selected_product.id %}selected{% endif %}
+                >
+                    {{ product.name }} — {{ product.display_amount }} INR
+                </option>
+                {% endfor %}
+            </select>
+
+            <div class="amount-row">
+                <span id="productTitle">{{ selected_product.name }}</span>
+                <span class="amount-value" id="displayAmount">{{ selected_product.display_amount }}</span>
+            </div>
+        </div>
+
+        <button id="payButton" type="button">Pay Now</button>
+
+        <div id="message"></div>
+        <div id="paymentReceipt">
+            <div><strong>Status:</strong> <span id="receiptStatus"></span></div>
+            <div><strong>Payment ID:</strong> <span id="receiptPaymentId"></span></div>
+            <div><strong>Order ID:</strong> <span id="receiptOrderId"></span></div>
+            <div><strong>Currency:</strong> <span id="receiptCurrency">INR (₹)</span></div>
+        </div>
+    </div>
+
+    <script>
+        const productSelect = document.getElementById("productSelect");
+        const productTitle = document.getElementById("productTitle");
+        const displayAmount = document.getElementById("displayAmount");
+
+        productSelect.addEventListener("change", function () {
+            const opt = productSelect.options[productSelect.selectedIndex];
+            productTitle.innerText = opt.dataset.name;
+            displayAmount.innerText = opt.dataset.amount;
+        });
+
+        document.getElementById("payButton").onclick = async function () {
+            const message = document.getElementById("message");
+            const receipt = document.getElementById("paymentReceipt");
+            receipt.style.display = "none";
+            message.className = "";
+            message.innerText = "Creating INR payment order...";
+
+            try {
+                const response = await fetch("/create-order", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ product_id: productSelect.value })
+                });
+
+                const order = await response.json();
+                if (!response.ok) {
+                    throw new Error(order.error || "Order creation failed");
+                }
+
+                const options = {
+                    key: "{{ key_id }}",
+                    amount: order.amount,
+                    currency: order.currency,
+                    name: "Payment Automation India",
+                    description: order.product_name || "Test INR Transaction",
+                    order_id: order.order_id,
+
+                    handler: async function (payment) {
+                        const verifyResponse = await fetch("/verify-payment", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payment)
+                        });
+                        const result = await verifyResponse.json();
+                        message.innerText = result.message;
+
+                        if (verifyResponse.ok && result.status === "success") {
+                            message.className = "success";
+                            document.getElementById("receiptStatus").innerText = "Verified";
+                            document.getElementById("receiptPaymentId").innerText = result.razorpay_payment_id;
+                            document.getElementById("receiptOrderId").innerText = result.razorpay_order_id;
+                            receipt.style.display = "block";
+                        } else {
+                            message.className = "error";
+                        }
+                    },
+
+                    modal: {
+                        ondismiss: function () {
+                            message.className = "error";
+                            message.innerText = "Payment window closed.";
+                        }
+                    },
+
+                    theme: { color: "#2563eb" }
+                };
+
+                const checkout = new Razorpay(options);
+                checkout.on("payment.failed", function (response) {
+                    message.className = "error";
+                    message.innerText = response.error.description || "Payment failed";
+                });
+                checkout.open();
+            } catch (error) {
+                message.className = "error";
+                message.innerText = error.message;
+            }
+        };
+    </script>
+</body>
+</html>
