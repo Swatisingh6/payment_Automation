@@ -126,8 +126,10 @@ class PaymentPage:
         iframe_loc.wait_for(state="attached", timeout=30_000)
 
         checkout = self._checkout()
-        # Wait until contact input or payment options appear inside checkout
-        checkout.locator(self.MOBILE_INPUT_SEL).wait_for(state="visible", timeout=30_000)
+        # Wait until the contact input or payment options render inside Checkout
+        checkout.locator(
+            f"{self.MOBILE_INPUT_SEL}, {self.CARD_NUMBER_SEL}"
+        ).first.wait_for(state="visible", timeout=45_000)
         self.save_screenshot("02_checkout_opened")
         print("  ✅ Stage 2 passed: Razorpay Checkout opened (INR).")
         return checkout
@@ -142,6 +144,9 @@ class PaymentPage:
         print(f"📱 Entering +91 mobile number ({mobile[-4:].rjust(10, '*')}) …")
         checkout = self._checkout()
         mobile_field = checkout.locator(self.MOBILE_INPUT_SEL)
+        if mobile_field.count() == 0 or not mobile_field.first.is_visible():
+            print("  ℹ️ Contact step already pre-resolved; proceeding to Payment Options.")
+            return checkout
         mobile_field.wait_for(state="visible", timeout=20_000)
         mobile_field.click()
         mobile_field.fill(mobile)

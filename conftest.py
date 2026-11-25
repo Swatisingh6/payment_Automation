@@ -125,11 +125,11 @@ def _launch_recorded_page(request, context_kwargs: dict):
         context.close()
         browser.close()
 
-        # Rename Playwright's UUID video file to <test_name>.webm
+        # Rename Playwright's UUID video file to <test_name>.webm and remove popup stray videos
         if video is not None:
             try:
-                raw_path = video.path()
-                target_path = os.path.join(VIDEOS_DIR, f"{test_name}.webm")
+                raw_path = os.path.abspath(video.path())
+                target_path = os.path.abspath(os.path.join(VIDEOS_DIR, f"{test_name}.webm"))
                 if os.path.exists(raw_path):
                     if os.path.exists(target_path):
                         os.remove(target_path)
@@ -137,6 +137,13 @@ def _launch_recorded_page(request, context_kwargs: dict):
                     print(f"  🎥 Video saved → videos/{test_name}.webm")
             except Exception as exc:
                 print(f"  ⚠️ Could not rename video for {test_name}: {exc}")
+
+        for fname in os.listdir(VIDEOS_DIR):
+            if fname.startswith("page@") and fname.endswith(".webm"):
+                try:
+                    os.remove(os.path.join(VIDEOS_DIR, fname))
+                except Exception:
+                    pass
 
 
 @pytest.fixture(scope="function")
